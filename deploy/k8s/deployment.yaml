@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: wohlig-agents
-          image: asia-south1-docker.pkg.dev/wohlig/pocketstudio/wohlig-agents:9f30fb9
+          image: asia-south1-docker.pkg.dev/wohlig/pocketstudio/wohlig-agents:51758b7
           imagePullPolicy: Always
           ports:
             - containerPort: 3100
