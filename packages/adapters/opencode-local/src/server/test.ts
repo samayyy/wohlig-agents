@@ -339,9 +339,11 @@ export async function testEnvironment(
       // Sandbox bridges still add cold-start and transport overhead, but the
       // standard-2 Cloudflare tier now probes quickly enough that 90s keeps
       // useful headroom without letting slow hangs linger.
+      // Cloud-hosted LLMs (e.g. Ollama cloud) can have cold-start latency
+      // exceeding 60s, so the local default is raised to 180s.
       const helloProbeTimeoutSec = Math.max(
         1,
-        asNumber(config.helloProbeTimeoutSec, targetIsSandbox ? 90 : 60),
+        asNumber(config.helloProbeTimeoutSec, targetIsSandbox ? 90 : 180),
       );
 
       try {
