@@ -44,11 +44,31 @@ spec:
               value: "agents.pocketstudio.ai"
             - name: SERVE_UI
               value: "true"
+            # Auth
+            - name: PAPERCLIP_AUTH_BASE_URL_MODE
+              value: "explicit"
+            - name: PAPERCLIP_AUTH_DISABLE_SIGN_UP
+              value: "false"
+            # Heartbeat scheduler for agent wake-ups
+            - name: HEARTBEAT_SCHEDULER_ENABLED
+              value: "true"
+            - name: HEARTBEAT_SCHEDULER_INTERVAL_MS
+              value: "30000"
+            # Disable telemetry for self-hosted
+            - name: PAPERCLIP_TELEMETRY_DISABLED
+              value: "1"
+            - name: DO_NOT_TRACK
+              value: "1"
+            # Instance identity
+            - name: PAPERCLIP_INSTANCE_ID
+              value: "default"
+            # Database
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
                   name: wohlig-agents-secrets
                   key: DATABASE_URL
+            # Auth secrets
             - name: BETTER_AUTH_SECRET
               valueFrom:
                 secretKeyRef:
@@ -64,6 +84,22 @@ spec:
                 secretKeyRef:
                   name: wohlig-agents-secrets
                   key: GOOGLE_CLIENT_SECRET
+            # LLM API keys — available to agents via opencode_local adapter
+            # OPENAI_BASE_URL points to Ollama cloud OpenAI-compatible endpoint
+            - name: OPENAI_BASE_URL
+              value: "https://api.ollama.ai/v1"
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: wohlig-agents-secrets
+                  key: OLLAMA_API_KEY
+                  optional: true
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: wohlig-agents-secrets
+                  key: ANTHROPIC_API_KEY
+                  optional: true
           resources:
             requests:
               cpu: 100m
