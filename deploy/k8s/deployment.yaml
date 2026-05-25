@@ -75,7 +75,9 @@ spec:
             httpGet:
               path: /api/health
               port: 3100
-              host: localhost
+              httpHeaders:
+                - name: Host
+                  value: localhost
             initialDelaySeconds: 30
             periodSeconds: 30
             timeoutSeconds: 5
@@ -84,7 +86,9 @@ spec:
             httpGet:
               path: /api/health
               port: 3100
-              host: localhost
+              httpHeaders:
+                - name: Host
+                  value: localhost
             initialDelaySeconds: 15
             periodSeconds: 10
             timeoutSeconds: 3
