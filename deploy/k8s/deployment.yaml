@@ -20,6 +20,56 @@ spec:
       labels:
         app: wohlig-agents
     spec:
+      initContainers:
+        # Writes the OpenCode provider config to the PVC so the opencode_local
+        # adapter sees Ollama cloud as a named provider with the correct models.
+        # Uses @ai-sdk/openai-compatible pointing at api.ollama.ai/v1.
+        # Overwrites on every pod start to keep the API key current.
+        - name: opencode-config-init
+          image: busybox:1.37
+          command:
+            - sh
+            - -c
+            - |
+              mkdir -p /paperclip/.config/opencode
+              cat > /paperclip/.config/opencode/opencode.json << EOF
+              {
+                "\$schema": "https://opencode.ai/config.json",
+                "provider": {
+                  "ollama": {
+                    "npm": "@ai-sdk/openai-compatible",
+                    "name": "Ollama Cloud",
+                    "options": {
+                      "baseURL": "https://api.ollama.ai/v1",
+                      "apiKey": "${OLLAMA_API_KEY}"
+                    },
+                    "models": {
+                      "llama3.3:70b":        { "name": "Llama 3.3 70B" },
+                      "llama3.1:70b":        { "name": "Llama 3.1 70B" },
+                      "llama3.1:8b":         { "name": "Llama 3.1 8B" },
+                      "qwen2.5:72b":         { "name": "Qwen 2.5 72B" },
+                      "qwen2.5-coder:32b":   { "name": "Qwen 2.5 Coder 32B" },
+                      "deepseek-r1:70b":     { "name": "DeepSeek R1 70B" },
+                      "deepseek-r1:7b":      { "name": "DeepSeek R1 7B" },
+                      "mistral:7b":          { "name": "Mistral 7B" },
+                      "gemma2:27b":          { "name": "Gemma 2 27B" },
+                      "phi4:14b":            { "name": "Phi 4 14B" },
+                      "codellama:34b":       { "name": "Code Llama 34B" }
+                    }
+                  }
+                }
+              }
+              EOF
+              echo "OpenCode Ollama cloud config written to /paperclip/.config/opencode/opencode.json"
+          env:
+            - name: OLLAMA_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: wohlig-agents-secrets
+                  key: OLLAMA_API_KEY
+          volumeMounts:
+            - name: paperclip-data
+              mountPath: /paperclip
       containers:
         - name: wohlig-agents
           image: asia-south1-docker.pkg.dev/wohlig/pocketstudio/wohlig-agents:f7c1f01
@@ -84,16 +134,7 @@ spec:
                 secretKeyRef:
                   name: wohlig-agents-secrets
                   key: GOOGLE_CLIENT_SECRET
-            # LLM API keys — available to agents via opencode_local adapter
-            # OPENAI_BASE_URL points to Ollama cloud OpenAI-compatible endpoint
-            - name: OPENAI_BASE_URL
-              value: "https://api.ollama.ai/v1"
-            - name: OPENAI_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: wohlig-agents-secrets
-                  key: OLLAMA_API_KEY
-                  optional: true
+            # LLM API keys injected into agent runtime environments
             - name: ANTHROPIC_API_KEY
               valueFrom:
                 secretKeyRef:
