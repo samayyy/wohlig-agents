@@ -27,7 +27,7 @@ spec:
         fsGroup: 1000
       containers:
         - name: wohlig-agents
-          image: asia-south1-docker.pkg.dev/wohlig/pocketstudio/wohlig-agents:latest
+          image: asia-south1-docker.pkg.dev/wohlig/pocketstudio/wohlig-agents:76266b4
           imagePullPolicy: Always
           ports:
             - containerPort: 3100
