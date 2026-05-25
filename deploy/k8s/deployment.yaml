@@ -87,12 +87,7 @@ spec:
           volumeMounts:
             - name: paperclip-data
               mountPath: /paperclip
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: false
-            capabilities:
-              drop:
-                - ALL
+          securityContext: {}
       volumes:
         - name: paperclip-data
           persistentVolumeClaim:
