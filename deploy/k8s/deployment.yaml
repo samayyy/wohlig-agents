@@ -40,6 +40,8 @@ spec:
               value: "authenticated"
             - name: PAPERCLIP_DEPLOYMENT_EXPOSURE
               value: "private"
+            - name: PAPERCLIP_ALLOWED_HOSTNAMES
+              value: "agents.pocketstudio.ai"
             - name: SERVE_UI
               value: "true"
             - name: DATABASE_URL
@@ -73,6 +75,7 @@ spec:
             httpGet:
               path: /api/health
               port: 3100
+              host: localhost
             initialDelaySeconds: 30
             periodSeconds: 30
             timeoutSeconds: 5
@@ -81,6 +84,7 @@ spec:
             httpGet:
               path: /api/health
               port: 3100
+              host: localhost
             initialDelaySeconds: 15
             periodSeconds: 10
             timeoutSeconds: 3
