@@ -64,7 +64,7 @@ spec:
                   key: GOOGLE_CLIENT_SECRET
           resources:
             requests:
-              cpu: 200m
+              cpu: 100m
               memory: 512Mi
             limits:
               cpu: 2000m
