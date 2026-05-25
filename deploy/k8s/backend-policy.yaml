@@ -1,0 +1,33 @@
+apiVersion: networking.gke.io/v1
+kind: HealthCheckPolicy
+metadata:
+  name: wohlig-agents-health-check
+  namespace: pocketstudio-prod
+spec:
+  default:
+    checkIntervalSec: 15
+    timeoutSec: 5
+    config:
+      type: HTTP
+      httpHealthCheck:
+        port: 3100
+        requestPath: /api/health
+  targetRef:
+    group: ""
+    kind: Service
+    name: wohlig-agents
+---
+# Raise the LB backend timeout to match the HTTPRoute timeout.
+# Default is 30s — far too short for long-running agent execution streams.
+apiVersion: networking.gke.io/v1
+kind: GCPBackendPolicy
+metadata:
+  name: wohlig-agents-backend-policy
+  namespace: pocketstudio-prod
+spec:
+  default:
+    timeoutSec: 3600
+  targetRef:
+    group: ""
+    kind: Service
+    name: wohlig-agents

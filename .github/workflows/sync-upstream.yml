@@ -1,0 +1,170 @@
+name: Sync Upstream
+
+# Pulls the latest commits from paperclipai/paperclip daily and merges them
+# into the Wohlig white-label fork. Known branding files are always kept as
+# "ours". If unexpected conflicts appear, a GitHub issue is opened for manual
+# review instead of pushing a broken merge.
+#
+# On a clean merge this pushes to main, which triggers Build & Deploy
+# and rolls out the update automatically.
+
+on:
+  schedule:
+    - cron: '0 3 * * *'   # 3 AM UTC daily
+  workflow_dispatch:        # allow manual trigger from GitHub Actions UI
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  sync:
+    name: Merge upstream paperclipai/paperclip
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/paperclipai/paperclip.git
+          git fetch upstream main
+
+      - name: Check delta
+        id: delta
+        run: |
+          BEHIND=$(git rev-list HEAD..upstream/main --count)
+          LATEST=$(git rev-parse --short upstream/main)
+          echo "behind=$BEHIND"   >> $GITHUB_OUTPUT
+          echo "latest=$LATEST"   >> $GITHUB_OUTPUT
+          if [ "$BEHIND" = "0" ]; then
+            echo "Already up to date — nothing to do."
+          else
+            echo "Upstream has $BEHIND new commit(s), latest: $LATEST"
+          fi
+
+      - name: Merge upstream
+        if: steps.delta.outputs.behind != '0'
+        id: merge
+        run: |
+          set +e   # we handle errors manually below
+
+          UPSTREAM_SHA="${{ steps.delta.outputs.latest }}"
+
+          # Attempt the merge. Will exit non-zero on conflicts — that's okay.
+          git merge upstream/main --no-edit \
+            -m "chore: sync upstream ${UPSTREAM_SHA} [skip ci]"
+          MERGE_EXIT=$?
+
+          # ── Always restore our Wohlig branding assets ──────────────────────
+          for ASSET in \
+            ui/public/favicon.svg \
+            ui/public/favicon.ico \
+            ui/public/wohlig-wordmark.svg \
+            ui/public/site.webmanifest; do
+            git checkout --ours "$ASSET" 2>/dev/null && git add "$ASSET" || true
+          done
+
+          # ── Resolve conflicts in known branding-sensitive files ─────────────
+          BRANDING_FILES=(
+            "ui/index.html"
+            "ui/src/context/BreadcrumbContext.tsx"
+            "ui/src/pages/Auth.tsx"
+            "ui/src/components/IssueChatThread.tsx"
+            "ui/src/lib/issue-chat-messages.ts"
+            "ui/src/index.css"
+          )
+
+          CONFLICTED=$(git diff --name-only --diff-filter=U 2>/dev/null || true)
+
+          if [ -n "$CONFLICTED" ]; then
+            for F in "${BRANDING_FILES[@]}"; do
+              if echo "$CONFLICTED" | grep -qF "$F"; then
+                echo "Conflict in $F — keeping ours (Wohlig branding)"
+                git checkout --ours "$F"
+                git add "$F"
+              fi
+            done
+          fi
+
+          # ── Check for remaining unresolved conflicts ─────────────────────────
+          REMAINING=$(git diff --name-only --diff-filter=U 2>/dev/null || true)
+          if [ -n "$REMAINING" ]; then
+            echo "UNRESOLVED CONFLICTS:"
+            echo "$REMAINING"
+            git merge --abort || true
+            echo "has_unresolved=true"  >> $GITHUB_OUTPUT
+            REMAINING_ESC="${REMAINING//$'\n'/\\n}"
+            echo "unresolved=$REMAINING_ESC" >> $GITHUB_OUTPUT
+          else
+            if [ $MERGE_EXIT -ne 0 ]; then
+              git commit --no-edit -m "chore: sync upstream ${UPSTREAM_SHA} — resolved branding conflicts [skip ci]"
+            fi
+            echo "has_unresolved=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Push to main
+        if: steps.delta.outputs.behind != '0' && steps.merge.outputs.has_unresolved == 'false'
+        run: |
+          git pull --rebase origin main
+          git push origin main
+          echo "Pushed upstream sync — Build & Deploy will pick it up."
+
+      - name: Open issue on unresolved conflicts
+        if: steps.delta.outputs.behind != '0' && steps.merge.outputs.has_unresolved == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const upstream = '${{ steps.delta.outputs.latest }}';
+            const files    = '${{ steps.merge.outputs.unresolved }}'.replace(/\\n/g, '\n');
+            const body = [
+              `Automated upstream sync from **paperclipai/paperclip@${upstream}** hit conflicts`,
+              `in files that are NOT in the known branding-file list.`,
+              ``,
+              `**Conflicted files:**`,
+              '```',
+              files,
+              '```',
+              ``,
+              `**To resolve manually:**`,
+              '```bash',
+              `git fetch upstream`,
+              `git merge upstream/main`,
+              `# fix conflicts, keeping Wohlig branding`,
+              `git push origin main`,
+              '```',
+              ``,
+              `Once pushed, Build & Deploy will deploy automatically.`,
+            ].join('\n');
+
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              state: 'open',
+              labels: 'upstream-sync',
+            });
+            if (existing.data.length === 0) {
+              await github.rest.issues.create({
+                owner:  context.repo.owner,
+                repo:   context.repo.repo,
+                title:  `upstream sync needs manual review (${upstream})`,
+                body,
+                labels: ['upstream-sync'],
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner:      context.repo.owner,
+                repo:       context.repo.repo,
+                issue_number: existing.data[0].number,
+                body: `New conflict at upstream@${upstream}:\n\`\`\`\n${files}\n\`\`\``,
+              });
+            }

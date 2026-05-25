@@ -1,0 +1,26 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: wohlig-agents
+  namespace: pocketstudio-prod
+  labels:
+    app: wohlig-agents
+spec:
+  parentRefs:
+    - name: pocketstudio-gateway
+      namespace: gateway
+  hostnames:
+    - agents.pocketstudio.ai
+  rules:
+    # All traffic goes directly to wohlig-agents (Paperclip has its own auth).
+    # 3600s timeout: agent runs and long-polling SSE streams can last several minutes.
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      timeouts:
+        request: 3600s
+        backendRequest: 3600s
+      backendRefs:
+        - name: wohlig-agents
+          port: 3100

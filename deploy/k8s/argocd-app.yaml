@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: wohlig-agents
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/samayyy/wohlig-agents.git
+    targetRevision: main
+    path: deploy/k8s
+    directory:
+      # Exclude ArgoCD app itself (applied separately) and secrets (managed out-of-band)
+      exclude: "{argocd-app.yaml,secret.yaml}"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: pocketstudio-prod
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      name: wohlig-agents-secrets
+      namespace: pocketstudio-prod
+      jsonPointers:
+        - /data
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
