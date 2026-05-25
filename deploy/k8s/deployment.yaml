@@ -100,7 +100,7 @@ spec:
               mountPath: /paperclip
       containers:
         - name: wohlig-agents
-          image: asia-south1-docker.pkg.dev/wohlig/pocketstudio/wohlig-agents:f9b4569
+          image: asia-south1-docker.pkg.dev/wohlig/pocketstudio/wohlig-agents:609007d
           imagePullPolicy: Always
           ports:
             - containerPort: 3100
