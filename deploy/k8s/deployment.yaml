@@ -23,7 +23,7 @@ spec:
       initContainers:
         # Writes the OpenCode provider config to the PVC so the opencode_local
         # adapter sees Ollama cloud as a named provider with the correct models.
-        # Uses @ai-sdk/openai-compatible pointing at api.ollama.ai/v1.
+        # Uses @ai-sdk/openai-compatible pointing at ollama.com/v1 (api.ollama.ai has no DNS).
         # Overwrites on every pod start to keep the API key current.
         - name: opencode-config-init
           image: busybox:1.37
@@ -40,7 +40,7 @@ spec:
                     "npm": "@ai-sdk/openai-compatible",
                     "name": "Ollama Cloud",
                     "options": {
-                      "baseURL": "https://api.ollama.ai/v1",
+                      "baseURL": "https://ollama.com/v1",
                       "apiKey": "${OLLAMA_API_KEY}"
                     },
                     "models": {
