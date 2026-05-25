@@ -20,11 +20,6 @@ spec:
       labels:
         app: wohlig-agents
     spec:
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
       containers:
         - name: wohlig-agents
           image: asia-south1-docker.pkg.dev/wohlig/pocketstudio/wohlig-agents:76266b4
