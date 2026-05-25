@@ -67,6 +67,7 @@ spec:
                       "gemma4:4b":                { "name": "Gemma 4 4B" },
                       "gemma3:27b":               { "name": "Gemma 3 27B" },
                       "gemma3:9b":                { "name": "Gemma 3 9B" },
+                      "glm-5.1:cloud":            { "name": "GLM-5.1 Cloud" },
                       "glm4:9b":                  { "name": "GLM-4 9B" },
                       "glm-z1-rumination:32b":    { "name": "GLM-Z1 Rumination 32B" },
                       "devstral:24b":             { "name": "Devstral 24B (Mistral Coding)" },
